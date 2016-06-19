@@ -75,6 +75,7 @@ poped_optim <- function(poped.db,
                         loop_methods=ifelse(length(method)>1,TRUE,FALSE),
                         iter_max = 10,
                         eff_crit = 1.001,
+                        ofv_fun = poped.db$settings$ofv_fun,
                         ...){
   
   #------------ update poped.db with options supplied in function
@@ -92,6 +93,30 @@ poped_optim <- function(poped.db,
     stop('No optimization parameter is set.')
   }
   
+  if(is.null(ofv_fun) || is.function(ofv_fun)){
+    ofv_fun_user <- ofv_fun 
+  } else {
+    # source explicit file
+    # here I assume that function in file has same name as filename minus .txt and pathnames
+    if(file.exists(as.character(ofv_fun))){
+      source(as.character(ofv_fun))
+      ofv_fun_user <- eval(parse(text=fileparts(ofv_fun)[["filename"]]))
+    } else {
+      stop("ofv_fun is not a function or NULL, and no file with that name was found")
+    }
+
+  }
+  if(!is.null(ofv_fun)){
+    poped.db$settings$ofv_calc_type = 0
+  }
+  
+
+  
+  #---------- functions
+  dots <- function(...) {
+    eval(substitute(alist(...)))
+  }
+  
   #------------- initialization
   fmf = 0 #The best FIM so far
   dmf = 0 #The best ofv of FIM  so far
@@ -102,6 +127,7 @@ poped_optim <- function(poped.db,
                             use_laplace=use_laplace,
                             ofv_calc_type=ofv_calc_type,
                             fim.calc.type=fim.calc.type,
+                            ofv_fun = ofv_fun_user,
                             ...)
   
   fmf <- output$fim
@@ -227,23 +253,55 @@ poped_optim <- function(poped.db,
     a <- NULL
     if(opt_a) a <- matrix(par[par_type=="a"],par_dim$a)
     
-    if(d_switch){
-      FIM <- evaluate.fim(poped.db,xt=xt,a=a,...)
-      ofv <- ofv_fim(FIM,poped.db,...)
-    } else{
-      output <-calc_ofv_and_fim(poped.db,d_switch=d_switch,
-                                ED_samp_size=ED_samp_size,
-                                bLHS=bLHS,
-                                use_laplace=use_laplace,
-                                ofv_calc_type=ofv_calc_type,
-                                fim.calc.type=fim.calc.type,
-                                xt=xt,
-                                a=a,
-                                ...)
-      
-      FIM <- output$fim
-      ofv <- output$ofv
-    }
+    # if(d_switch){
+    #   FIM <- evaluate.fim(poped.db,xt=xt,a=a,...)
+    #   ofv <- ofv_fim(FIM,poped.db,...)
+    # } else{
+    #   output <-calc_ofv_and_fim(poped.db,d_switch=d_switch,
+    #                             ED_samp_size=ED_samp_size,
+    #                             bLHS=bLHS,
+    #                             use_laplace=use_laplace,
+    #                             ofv_calc_type=ofv_calc_type,
+    #                             fim.calc.type=fim.calc.type,
+    #                             xt=xt,
+    #                             a=a,
+    #                             ...)
+    #   
+    #   FIM <- output$fim
+    #   ofv <- output$ofv
+    # }
+    
+    
+    extra_args <- dots(...)
+    extra_args$evaluate_fim <- FALSE
+
+    output <- do.call(calc_ofv_and_fim,
+                      c(list(
+                        poped.db,d_switch=d_switch,
+                        ED_samp_size=ED_samp_size,
+                        bLHS=bLHS,
+                        use_laplace=use_laplace,
+                        ofv_calc_type=ofv_calc_type,
+                        fim.calc.type=fim.calc.type,
+                        xt=xt,
+                        a=a,
+                        ofv_fun = ofv_fun_user
+                      ),
+                        extra_args))
+              
+    
+    # output <-calc_ofv_and_fim(poped.db,d_switch=d_switch,
+    #                           ED_samp_size=ED_samp_size,
+    #                           bLHS=bLHS,
+    #                           use_laplace=use_laplace,
+    #                           ofv_calc_type=ofv_calc_type,
+    #                           fim.calc.type=fim.calc.type,
+    #                           xt=xt,
+    #                           a=a,
+    #                           evaluate_fim = F,
+    #                           ...)
+    #FIM <- output$fim
+    ofv <- output$ofv
     
     
     #ofv <- tryCatch(ofv_fim(FIM,poped.db,...), error = function(e) e)
@@ -486,19 +544,35 @@ poped_optim <- function(poped.db,
   #if((trflag)){
   #  if(footer_flag){
   #FIM <- evaluate.fim(poped.db,...)
-  if(d_switch){
-    FIM <- evaluate.fim(poped.db,...)
-  } else{
-    out <-calc_ofv_and_fim(poped.db,d_switch=d_switch,
-                           ED_samp_size=ED_samp_size,
-                           bLHS=bLHS,
-                           use_laplace=use_laplace,
-                           ofv_calc_type=ofv_calc_type,
-                           fim.calc.type=fim.calc.type,
-                           ...)
-    
-    FIM <- out$fim
-  }
+  
+  # if(d_switch){
+  #   FIM <- evaluate.fim(poped.db,...)
+  # } else{
+  #   out <-calc_ofv_and_fim(poped.db,d_switch=d_switch,
+  #                          ED_samp_size=ED_samp_size,
+  #                          bLHS=bLHS,
+  #                          use_laplace=use_laplace,
+  #                          ofv_calc_type=ofv_calc_type,
+  #                          fim.calc.type=fim.calc.type,
+  #                          ...)
+  #   
+  #   FIM <- out$fim
+  # }
+  
+  FIM <-calc_ofv_and_fim(poped.db,
+                            ofv=output$ofv,
+                            fim=0, 
+                            d_switch=d_switch,
+                            ED_samp_size=ED_samp_size,
+                            bLHS=bLHS,
+                            use_laplace=use_laplace,
+                            ofv_calc_type=ofv_calc_type,
+                            fim.calc.type=fim.calc.type,
+                         ofv_fun = ofv_fun_user,
+                         
+                            ...)[["fim"]]
+  
+  
   blockfinal(fn=fn,fmf=FIM,
              dmf=output$ofv,
              groupsize=poped.db$design$groupsize,

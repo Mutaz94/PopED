@@ -18,7 +18,7 @@ poped_optim(poped.db, opt_xt = poped.db$settings$optsw[2],
   use_laplace = poped.db$settings$iEDCalculationType, out_file = "",
   parallel = F, parallel_type = NULL, num_cores = NULL,
   loop_methods = ifelse(length(method) > 1, TRUE, FALSE), iter_max = 10,
-  eff_crit = 1.001, ...)
+  eff_crit = 1.001, ofv_fun = poped.db$settings$ofv_fun, ...)
 }
 \arguments{
 \item{poped.db}{A PopED database.}
@@ -110,6 +110,10 @@ iteration is run unless \code{iter_max} iterations have already been run.}
 efficiency of the design after the current series (compared to the start of
 the series) is less than, or equal to, \code{eff_crit}.}
 
+\item{ofv_fun}{User defined function used to compute the objective function. The function must have a poped database object as its first
+argument and have "..." in its argument list.  Can be referenced as a function or as a file name where the funciton defined in the file has the same name as the file.
+e.g. "cost.txt" has a function named "cost" in it.}
+
 \item{...}{arguments passed to other functions.}
 }
 \description{
@@ -193,6 +197,21 @@ out_1 <- poped_optim(poped.db,opt_a =TRUE,
                                      BFGS=list(maxit=2),
                                      LS=list(line_length=2)),
                       iter_max = 1)
+
+# cost function
+# maximize PRED at 120 hours
+crit_fcn <- function(poped.db,...){
+  pred_df <- model_prediction(poped.db)
+  return(pred_df[pred_df$Time==120,"PRED"])
+}
+
+poped_optim(poped.db,opt_a =TRUE,
+            ofv_fun=crit_fcn,
+            control = list(ARS=list(iter=2),
+                           BFGS=list(maxit=2),
+                           LS=list(line_length=2)),
+            iter_max = 1)
+
 
 \dontrun{
   

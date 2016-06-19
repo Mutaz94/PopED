@@ -47,6 +47,7 @@ create.poped.database(popedInput = list(),
   ofv_calc_type = poped.choose(popedInput$ofv_calc_type, 4),
   ds_index = popedInput$CriterionOptions$ds_index,
   strEDPenaltyFile = poped.choose(popedInput$strEDPenaltyFile, ""),
+  ofv_fun = NULL,
   iEDCalculationType = poped.choose(popedInput$iEDCalculationType, 0),
   ED_samp_size = poped.choose(popedInput$ED_samp_size, 45),
   bLHS = poped.choose(popedInput$bLHS, 1),
@@ -319,6 +320,10 @@ Default is the fixed effects being important, everything else not important.  Us
 
 \item{strEDPenaltyFile}{Penalty function name or path and filename, empty string means no penalty.
 User defined criterion can be defined this way.}
+
+\item{ofv_fun}{User defined function used to compute the objective function. The function must have a poped database object as its first
+argument and have "..." in its argument list.  Can be referenced as a function or as a file name where the funciton defined in the file has the same name as the file.
+e.g. "cost.txt" has a function named "cost" in it.}
 
 \item{iEDCalculationType}{\itemize{
 \item \bold{******START OF E-FAMILY CRITERION SPECIFICATION OPTIONS**********}}
