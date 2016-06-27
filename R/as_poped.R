@@ -1,18 +1,29 @@
-as.poped <- function(filename) {
+# Loads PharmML as PopED. If out_file is given, script is generated (but not
+# executed). If out_file is "" or "same", the basename of PharmML is used.
+as.poped <- function(filename, out_file=NULL) {
 
-  converter_path <- system.file("PharmML", package="PopED")
-  converter_path <- paste0(converter_path, "/pharmml2poped.exe")
-  command <- paste(converter_path, filename, sep=' ')
+    converter_path <- system.file("PharmML", package="PopED")
+    converter_path <- paste0(converter_path, "/pharmml2poped.exe")
+    command <- paste(converter_path, filename, sep=' ')
 
-  stderr <- system2(converter_path, args=c(filename), stdout=FALSE, stderr=TRUE)
-  
-  if (length(stderr) == 0) {
-    stdout <- shell(command, intern=TRUE)
+    stderr <- system2(converter_path, args=c(filename), stdout=FALSE, stderr=TRUE)
 
-    eval(parse(text=stdout), envir=.GlobalEnv)  
-  } else {
-    cat(stderr)
-  }
+    if (length(stderr) == 0) {
+        stdout <- shell(command, intern=TRUE)
 
-  invisible()
+        if (is.null(out_file)) {
+            eval(parse(text=stdout), envir=.GlobalEnv)
+        } else {
+            if (out_file == "" || tolower(out_file) == "same") {
+                out_file = sub("^(.*)??(\\.[[:alnum:]]+)?$", "\\1.R", filename)
+            }
+            tryCatch({
+                suppressWarnings(write(stdout, file=out_file))
+            }, error=function(e){ cat(paste0(e, " (for file '", out_file, "')")) })
+        }
+    } else {
+        cat(stderr)
+    }
+    invisible()
 }
+
