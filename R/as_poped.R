@@ -6,17 +6,20 @@ as.poped <- function(filename, out_file=NULL) {
     converter_path <- paste0(converter_path, "/pharmml2poped.exe")
     command <- paste(converter_path, filename, sep=' ')
 
-    stdout <- system2(converter_path, args=c(filename), stdout=TRUE, stderr="")
-
+    err <- system2(converter_path, args=c(filename), stdout=F, stderr=T)
+    invisible(lapply(err, warning, call.=F))
+    out <- system2(converter_path, args=c(filename), stdout=T, stderr=F)
+    
     if (is.null(out_file)) {
-        eval(parse(text=stdout), envir=.GlobalEnv)
+        tryCatch(eval(parse(text=out), envir=.GlobalEnv),
+                 error=function(e){ warning("Fatal: Could not load conversion result", call.=F) });
     } else {
         if (out_file == "" || tolower(out_file) == "same") {
             out_file = sub("^(.*)??(\\.[[:alnum:]]+)?$", "\\1.R", filename)
         }
         tryCatch({
-            suppressWarnings(write(stdout, file=out_file))
-        }, error=function(e){ cat(paste0(e, " (for file '", out_file, "')")) })
+            suppressWarnings(write(out, file=out_file))
+        }, error=function(e){ warning(paste0(e, " Is file '", out_file, "' writeable?"), call.=F) })
     }
     invisible()
 }
