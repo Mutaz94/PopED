@@ -3,7 +3,11 @@
 as.poped <- function(filename, out_file=NULL) {
 
     converter_path <- system.file("PharmML", package="PopED")
-    converter_path <- paste0(converter_path, "/pharmml2poped.exe")
+    if (Sys.info()['sysname'] == 'Linux') {
+        converter_path <- paste0(converter_path, "/pharmml2poped")
+    } else {
+        converter_path <- paste0(converter_path, "/pharmml2poped.exe")
+    }
     command <- paste(converter_path, filename, sep=' ')
 
     err <- system2(converter_path, args=c(filename), stdout=F, stderr=T)
